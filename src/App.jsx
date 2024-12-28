@@ -8,10 +8,8 @@ function App() {
   return (
       <div className='canvas'>
         <GlobalStyles />
-        <div>haha</div>
         <UpperMenu />
         <TypingBox />
-        <div>hehe</div>
       </div>
   )
 }
