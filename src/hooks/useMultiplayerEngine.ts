@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { generateWords } from '../utils/words';
@@ -37,9 +37,20 @@ export const useMultiplayerEngine = (userProfile: { id: string; name: string } |
   
   const [localStats, setLocalStats] = useState<LocalStats | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
+  
+  const winnerIdRef = useRef(winnerId);
+  const targetTextRef = useRef(targetText);
+  const isReadyRef = useRef(isReady);
+  const opponentRef = useRef(opponent);
 
-  const localId = userProfile?.id || 'guest-' + Math.random().toString(36).substr(2, 9);
-  const localName = userProfile?.name || 'Guest' + Math.floor(Math.random() * 1000);
+  // Sync refs
+  useEffect(() => { winnerIdRef.current = winnerId; }, [winnerId]);
+  useEffect(() => { targetTextRef.current = targetText; }, [targetText]);
+  useEffect(() => { isReadyRef.current = isReady; }, [isReady]);
+  useEffect(() => { opponentRef.current = opponent; }, [opponent]);
+
+  const localId = useMemo(() => userProfile?.id || 'guest-' + Math.random().toString(36).substr(2, 9), [userProfile?.id]);
+  const localName = useMemo(() => userProfile?.name || 'Guest' + Math.floor(Math.random() * 1000), [userProfile?.name]);
 
   // Typing engine internals
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -147,8 +158,11 @@ export const useMultiplayerEngine = (userProfile: { id: string; name: string } |
             setOpponent(null);
          }
 
+          // Read latest from refs
+         const currentTargetText = targetTextRef.current;
+         
          // Host checks if both ready
-         if (hostId === localId && opp && opp.isReady && weAreReady && !hasFinished.current && targetText === '') {
+         if (hostId === localId && opp && opp.isReady && weAreReady && !hasFinished.current && currentTargetText === '') {
              const words = generateWords(25);
              newChannel.send({
                 type: 'broadcast',
@@ -163,7 +177,7 @@ export const useMultiplayerEngine = (userProfile: { id: string; name: string } |
          setCountdown(3);
       })
       .on('broadcast', { event: 'player_finished' }, (payload) => {
-          if (winnerId === null) {
+          if (winnerIdRef.current === null) {
               setWinnerId(payload.payload.id);
           }
       });
